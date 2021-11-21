@@ -17,8 +17,6 @@ use winit::{
 
 use pixels::{Error, Pixels, SurfaceTexture};
 
-use screenshot;
-
 pub fn main() -> Result<(), Error> {
     // screenshot::init();
 
@@ -49,7 +47,7 @@ pub fn main() -> Result<(), Error> {
     // TODO: create capture thread
     let window = Arc::new(window);
     let winref = window.clone();
-    let pix_src = std::thread::spawn(move || {
+    std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(500));
         let recorder =
             screenshot::ScreenRecorder::capture_primary().expect("could not capture primary");
@@ -122,8 +120,8 @@ pub fn main() -> Result<(), Error> {
                 loop {
                     // drain
                     let trypix = pix_receiver.try_recv();
-                    if trypix.is_ok() {
-                        *pix = trypix.unwrap();
+                    if let Ok(p) = trypix {
+                        *pix = p;
                         tmp = Some(&pix)
                     // }
                     } else {
@@ -136,10 +134,10 @@ pub fn main() -> Result<(), Error> {
                 // let offset_x = 0;
                 let target_width = window.inner_size().width as usize;
                 let target_height = window.inner_size().width as usize;
-                if target_width <= 0 || target_height <= 0 {
+                if target_width == 0 || target_height == 0 {
                     return;
                 }
-                let src_width = pix.width;
+                // let src_width = pix.width;
                 let src_height = pix.width as i32;
                 let mut offset_x = 0;
                 let mut offset_y = 0;
@@ -173,7 +171,7 @@ pub fn main() -> Result<(), Error> {
                     for i in 0..10 {
                         // TODO: ensure small windows do not cause panic
                         let k = (i + j * target_width as usize) * 4;
-                        frame[k] = flash ^ frame[k];
+                        frame[k] ^= flash;
                         // frame[k+1] = flash;
                         // frame[k+2] = flash;
                     }
@@ -222,11 +220,6 @@ pub fn main() -> Result<(), Error> {
         // window.request_redraw();
     });
 
-    #[allow(unreachable_code)]
-    {
-        pix_src.join();
-        Ok(())
-    }
 }
 
 // mod picker {

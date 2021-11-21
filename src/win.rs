@@ -8,7 +8,3 @@ pub fn hide_from_capture(window: &Window) -> Result<()> {
     let hwnd = window.hwnd();
     unsafe { SetWindowDisplayAffinity(HWND(hwnd as isize), WDA_EXCLUDEFROMCAPTURE) }.ok()
 }
-
-pub fn hide_mouse_capture() -> Result<()> {
-    Ok(())
-}
