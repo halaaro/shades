@@ -1,0 +1,13 @@
+[package]
+name = "wgpu-screenshot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+screenshot = { path = "../screenshot-rs" }
+wgpu-hal = { path = "./crates/wgpu/wgpu-hal", features = ["dx12"] }
+wgpu-types = { path = "./crates/wgpu/wgpu-types" }
+winapi = "*"
+windows = "0.25.0"
