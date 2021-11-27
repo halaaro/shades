@@ -23,6 +23,9 @@ pub fn main() -> Result<(), Error> {
     let show_decoration = std::env::var("SHADES_NO_WIN_DECORATION").as_deref() != Ok("1");
     let always_on_top = std::env::var("SHADES_NO_ALWAYS_ON_TOP").as_deref() != Ok("1");
     let perf_mode = std::env::var("SHADES_PERF_MODE").as_deref() == Ok("1");
+    let parent_win = std::env::var("SHADES_PARENT_WIN").ok().and_then(|s| s.parse::<isize>().ok());
+
+
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("Shades")
@@ -34,26 +37,24 @@ pub fn main() -> Result<(), Error> {
 
     let id = window.id();
 
-    // std::thread::spawn(move || {
-    //     //let res = picker::pick_picker(&window);
-    //     //res.expect("Could not pick window");
-    //     //window
-
-    // });
-
     win::hide_from_capture(&window).expect("could not hide window from capture");
-
-    let (pix_sender, pix_receiver) = std::sync::mpsc::sync_channel(1);
-    // TODO: create capture thread
-    let window = Arc::new(window);
-    let winref = window.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(500));
-        let recorder =
+    
+    if let Some(parent) = parent_win {
+        // win::set_child(&window);
+        win::set_parent(&window, parent);
+    }
+        
+        let (pix_sender, pix_receiver) = std::sync::mpsc::sync_channel(1);
+        // TODO: create capture thread
+        let window = Arc::new(window);
+        let winref = window.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(500));
+            let recorder =
             screenshot::ScreenRecorder::capture_primary().expect("could not capture primary");
-
-        let mut last_hash = 0;
-        let mut hasher: DefaultHasher = Default::default();
+            
+            let mut last_hash = 0;
+            let mut hasher: DefaultHasher = Default::default();
         loop {
             let pix = recorder.next().expect("could  not take screenshot");
             hasher.write(&pix.data.lock().unwrap());
@@ -93,6 +94,8 @@ pub fn main() -> Result<(), Error> {
     window.request_redraw();
 
     window.set_visible(true);
+    // win::set_transparent(&window);
+    // win::set_layered(&window);
 
     let mut cnt = 0;
     let mut dir = 1;
