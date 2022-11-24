@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 winit = "*"
 raw-window-handle = "*"
-screenshot = { path = "./crates/screenshot-rs" }
+screenshot = { path = "./crates/screenshot" }
 pixels = "*"
 
 [dependencies.windows]
