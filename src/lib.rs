@@ -5,11 +5,16 @@ use std::{
     collections::hash_map::DefaultHasher,
     default::Default,
     hash::Hasher,
-    sync::{mpsc::TrySendError, Arc},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::TrySendError,
+        Arc,
+    },
     time::Duration,
 };
 
 use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
@@ -23,8 +28,15 @@ pub fn main() -> Result<(), Error> {
     let show_decoration = std::env::var("SHADES_NO_WIN_DECORATION").as_deref() != Ok("1");
     let always_on_top = std::env::var("SHADES_NO_ALWAYS_ON_TOP").as_deref() != Ok("1");
     let perf_mode = std::env::var("SHADES_PERF_MODE").as_deref() == Ok("1");
-    let parent_win = std::env::var("SHADES_PARENT_WIN").ok().and_then(|s| s.parse::<isize>().ok());
-
+    let parent_win = std::env::var("SHADES_PARENT_WIN")
+        .ok()
+        .and_then(|s| s.parse::<isize>().ok());
+    let overlay = std::env::var("SHADES_OVERLAY").as_deref() == Ok("1");
+    let mut track_win = std::env::var("SHADES_TRACK_WIN")
+        .ok()
+        .and_then(|s| s.parse::<isize>().ok());
+    let track_foreground_win = std::env::var("SHADES_TRACK_FOREGROUND_WIN").as_deref() == Ok("1");
+    let maximized = std::env::var("SHADES_MAXIMIZED").as_deref() == Ok("1");
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
@@ -32,29 +44,33 @@ pub fn main() -> Result<(), Error> {
         .with_visible(false)
         .with_decorations(show_decoration)
         .with_always_on_top(always_on_top)
+        .with_maximized(maximized)
         .build(&event_loop)
         .expect("Could not build window");
 
     let id = window.id();
 
     win::hide_from_capture(&window).expect("could not hide window from capture");
-    
+
+    use winit::platform::windows::WindowExtWindows;
+    println!("hwnd={:?}, pid={}", window.hwnd(), std::process::id());
+
     if let Some(parent) = parent_win {
         // win::set_child(&window);
         win::set_parent(&window, parent);
     }
-        
-        let (pix_sender, pix_receiver) = std::sync::mpsc::sync_channel(1);
-        // TODO: create capture thread
-        let window = Arc::new(window);
-        let winref = window.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(500));
-            let recorder =
+
+    let (pix_sender, pix_receiver) = std::sync::mpsc::sync_channel(1);
+    // TODO: create capture thread
+    let window = Arc::new(window);
+    let winref = window.clone();
+    std::thread::spawn(move || {
+        // std::thread::sleep(Duration::from_millis(500));
+        let recorder =
             screenshot::ScreenRecorder::capture_primary().expect("could not capture primary");
-            
-            let mut last_hash = 0;
-            let mut hasher: DefaultHasher = Default::default();
+
+        let mut last_hash = 0;
+        let mut hasher: DefaultHasher = Default::default();
         loop {
             let pix = recorder.next().expect("could  not take screenshot");
             hasher.write(&pix.data.lock().unwrap());
@@ -78,6 +94,25 @@ pub fn main() -> Result<(), Error> {
         }
     });
 
+    if let None = track_win {
+        if track_foreground_win {
+            track_win = Some(win::get_foreground_hwnd());
+        }
+    }
+
+    let request_close = Arc::new(AtomicBool::new(false));
+    if let Some(hwnd) = track_win {
+        let window = Arc::clone(&window);
+        let request_close = Arc::clone(&request_close);
+        win::track(hwnd, move |event| match event {
+            Some(event) => match event {
+                win::TrackEvent::Size(size) => window.set_inner_size(size),
+                win::TrackEvent::Position(pos) => window.set_outer_position(pos),
+            },
+            None => request_close.store(true, Ordering::Relaxed),
+        });
+    }
+
     // let pix = screenshot::capture().expect("could not get screenshot");
     // let mut pix = screenshot::capture_win(&window).expect("could not get screenshot");
     let mut pix = pix_receiver.recv().unwrap();
@@ -94,8 +129,10 @@ pub fn main() -> Result<(), Error> {
     window.request_redraw();
 
     window.set_visible(true);
-    // win::set_transparent(&window);
-    // win::set_layered(&window);
+    if overlay {
+        win::set_transparent(&window);
+    }
+    win::set_layered(&window);
 
     let mut cnt = 0;
     let mut dir = 1;
@@ -219,10 +256,11 @@ pub fn main() -> Result<(), Error> {
             }
             _ => (),
         }
-
+        if request_close.load(Ordering::Relaxed) {
+            *control_flow = ControlFlow::Exit;
+        }
         // window.request_redraw();
     });
-
 }
 
 // mod picker {
