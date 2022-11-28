@@ -14,7 +14,6 @@ use std::{
 };
 
 use winit::{
-    dpi::{PhysicalPosition, PhysicalSize},
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
@@ -23,8 +22,6 @@ use winit::{
 use pixels::{Error, Pixels, SurfaceTexture};
 
 pub fn main() -> Result<(), Error> {
-    // screenshot::init();
-
     let show_decoration = std::env::var("SHADES_NO_WIN_DECORATION").as_deref() != Ok("1");
     let always_on_top = std::env::var("SHADES_NO_ALWAYS_ON_TOP").as_deref() != Ok("1");
     let perf_mode = std::env::var("SHADES_PERF_MODE").as_deref() == Ok("1");
@@ -88,16 +85,12 @@ pub fn main() -> Result<(), Error> {
                 }
                 hasher = Default::default();
                 last_hash = hash;
-
-                //
             }
         }
     });
 
-    if let None = track_win {
-        if track_foreground_win {
-            track_win = Some(win::get_foreground_hwnd());
-        }
+    if track_win.is_none() && track_foreground_win {
+        track_win = Some(win::get_foreground_hwnd());
     }
 
     let request_close = Arc::new(AtomicBool::new(false));
@@ -113,8 +106,6 @@ pub fn main() -> Result<(), Error> {
         });
     }
 
-    // let pix = screenshot::capture().expect("could not get screenshot");
-    // let mut pix = screenshot::capture_win(&window).expect("could not get screenshot");
     let mut pix = pix_receiver.recv().unwrap();
     println!("found {} x {} pixels", pix.width, pix.height);
 
@@ -125,7 +116,6 @@ pub fn main() -> Result<(), Error> {
         Pixels::new(window_size.width, window_size.height, surface_texture)?
     };
 
-    // var pos = window.inner_position().unwrap();
     window.request_redraw();
 
     window.set_visible(true);
@@ -163,7 +153,6 @@ pub fn main() -> Result<(), Error> {
                     if let Ok(p) = trypix {
                         *pix = p;
                         tmp = Some(&pix)
-                    // }
                     } else {
                         break;
                     }
@@ -171,13 +160,11 @@ pub fn main() -> Result<(), Error> {
                 tmp
             };
             if let Some(pix) = pix_opt {
-                // let offset_x = 0;
                 let target_width = window.inner_size().width as usize;
                 let target_height = window.inner_size().width as usize;
                 if target_width == 0 || target_height == 0 {
                     return;
                 }
-                // let src_width = pix.width;
                 let src_height = pix.width as i32;
                 let mut offset_x = 0;
                 let mut offset_y = 0;
@@ -186,7 +173,6 @@ pub fn main() -> Result<(), Error> {
                     offset_y = pos.y;
                 }
                 let max_j = (pix.width * pix.height - 1) as i32;
-                // println!("found {} x {} pixels", pix.width, pix.height);
                 {
                     let data = pix.data.lock().unwrap();
                     for (i, pixel) in pixels.get_frame().chunks_exact_mut(4).enumerate() {
@@ -200,9 +186,6 @@ pub fn main() -> Result<(), Error> {
                         pixel[1] = 255 - data[j * 4 + 1];
                         pixel[0] = 255 - data[j * 4 + 2];
                         hasher.write(pixel);
-                        // pixel[0] = 255-pix.data[j*4];
-                        // pixel[1] = 255-pix.data[j*4+1];
-                        // pixel[2] = 255-pix.data[j*4+2];
                     }
                 }
                 let frame = pixels.get_frame();
@@ -212,8 +195,6 @@ pub fn main() -> Result<(), Error> {
                         // TODO: ensure small windows do not cause panic
                         let k = (i + j * target_width as usize) * 4;
                         frame[k] ^= flash;
-                        // frame[k+1] = flash;
-                        // frame[k+2] = flash;
                     }
                 }
                 if dir == 1 {
@@ -259,33 +240,5 @@ pub fn main() -> Result<(), Error> {
         if request_close.load(Ordering::Relaxed) {
             *control_flow = ControlFlow::Exit;
         }
-        // window.request_redraw();
     });
 }
-
-// mod picker {
-//     use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-//     use windows::{runtime::*, Graphics::Capture::*, Win32::Foundation::*, Win32::UI::Shell::*};
-
-//     pub fn pick_picker<W: HasRawWindowHandle>(window: &W) -> Result<GraphicsCaptureItem> {
-//         let hwnd = match window.raw_window_handle() {
-//             RawWindowHandle::Windows(handle) => {
-//                 assert!(!handle.hwnd.is_null());
-//                 HWND(handle.hwnd as isize)
-//             }
-//             _ => panic!("Unsupported platform"),
-//         };
-
-//         let picker = GraphicsCapturePicker::new()?;
-//         let iw: IInitializeWithWindow = picker.cast()?;
-//         // SAFETY:
-//         // 1. hwnd is valid window handle and not null
-//         // 2. picker is valid
-//         unsafe { iw.Initialize(hwnd) }?;
-//         println!("Waiting for selection...");
-//         let result = picker.PickSingleItemAsync()?.get()?;
-//         println!("{:?}", result);
-
-//         Ok(result)
-//     }
-// }

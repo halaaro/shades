@@ -1,6 +1,4 @@
 #![allow(dead_code)]
-use std::ffi::c_void;
-use std::intrinsics::transmute;
 use std::mem::size_of;
 use std::thread;
 use std::time::Duration;
@@ -11,8 +9,8 @@ use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_
 use windows::Win32::UI::WindowsAndMessaging::{
     GetClientRect, GetForegroundWindow, GetWindowLongPtrA, GetWindowRect,
     SetLayeredWindowAttributes, SetParent, SetWindowDisplayAffinity, SetWindowLongPtrA,
-    SetWindowsHookExW, GWLP_HWNDPARENT, GWL_EXSTYLE, LWA_ALPHA, WDA_EXCLUDEFROMCAPTURE, WH_SHELL,
-    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TRANSPARENT,
+    GWLP_HWNDPARENT, GWL_EXSTYLE, LWA_ALPHA, WDA_EXCLUDEFROMCAPTURE, WS_EX_LAYERED,
+    WS_EX_NOACTIVATE, WS_EX_TRANSPARENT,
 };
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::windows::WindowExtWindows;
@@ -81,7 +79,7 @@ where
             DwmGetWindowAttribute(
                 HWND(target),
                 DWMWA_EXTENDED_FRAME_BOUNDS,
-                transmute(&mut drect),
+                &mut drect as *mut RECT as *mut std::ffi::c_void,
                 size_of::<RECT>() as u32,
             )
         };
