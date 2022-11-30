@@ -161,11 +161,11 @@ pub fn main() -> Result<(), Error> {
             };
             if let Some(pix) = pix_opt {
                 let target_width = window.inner_size().width as usize;
-                let target_height = window.inner_size().width as usize;
+                let target_height = window.inner_size().height as usize;
                 if target_width == 0 || target_height == 0 {
                     return;
                 }
-                let src_height = pix.width as i32;
+                let src_width = pix.width as i32;
                 let mut offset_x = 0;
                 let mut offset_y = 0;
                 if let Ok(pos) = window.inner_position() {
@@ -175,16 +175,42 @@ pub fn main() -> Result<(), Error> {
                 let max_j = (pix.width * pix.height - 1) as i32;
                 {
                     let data = pix.data.lock().unwrap();
+                    let avg_rgb = data
+                        .chunks_exact(src_width as usize * 4)
+                        .skip(max(0, offset_y) as usize)
+                        .take(target_height)
+                        .map(|row| {
+                            let x_left = max(0, min(src_width as i32, offset_x));
+                            let x_right =
+                                max(0, min(src_width as i32, target_width as i32 + offset_x));
+                            row[x_left as usize * 4..x_right as usize * 4]
+                                .iter()
+                                .map(|&d| d as f32)
+                                .sum::<f32>()
+                        })
+                        .sum::<f32>()
+                        / (target_width * target_height * 4) as f32;
+
+                    // TODO: use effect intensity instead
+                    let do_invert = avg_rgb > 150.0;
+
                     for (i, pixel) in pixels.get_frame().chunks_exact_mut(4).enumerate() {
-                        let col = (i % target_height) as i32;
-                        let row = (i / target_height) as i32;
-                        let j = max(
-                            0,
-                            min(max_j, (row + offset_y) * src_height + col + offset_x),
-                        ) as usize;
-                        pixel[2] = 255 - data[j * 4];
-                        pixel[1] = 255 - data[j * 4 + 1];
-                        pixel[0] = 255 - data[j * 4 + 2];
+                        let col = (i % target_width) as i32;
+                        let row = (i / target_width) as i32;
+                        let j = max(0, min(max_j, (row + offset_y) * src_width + col + offset_x))
+                            as usize;
+
+                        // TODO: use color-preserving invert
+                        // TODO: alternate darkening strategy
+                        if do_invert {
+                            pixel[2] = 255 - data[j * 4];
+                            pixel[1] = 255 - data[j * 4 + 1];
+                            pixel[0] = 255 - data[j * 4 + 2];
+                        } else {
+                            pixel[2] = data[j * 4];
+                            pixel[1] = data[j * 4 + 1];
+                            pixel[0] = data[j * 4 + 2];
+                        }
                         hasher.write(pixel);
                     }
                 }
