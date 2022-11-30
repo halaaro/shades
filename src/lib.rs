@@ -216,11 +216,12 @@ pub fn main() -> Result<(), Error> {
                 }
                 let frame = pixels.get_frame();
                 let flash = (cnt % 16) << 4;
-                for j in 0..10 {
-                    for i in 0..10 {
-                        // TODO: ensure small windows do not cause panic
-                        let k = (i + j * target_width as usize) * 4;
-                        frame[k] ^= flash;
+                if target_width > 10 && target_height > 10 {
+                    for j in 0..10 {
+                        for i in 0..10 {
+                            let k = (i + j * target_width as usize) * 4;
+                            frame[k] ^= flash;
+                        }
                     }
                 }
                 if dir == 1 {
