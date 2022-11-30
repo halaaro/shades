@@ -1,3 +1,4 @@
+mod cache;
 mod win;
 
 use std::{
@@ -35,13 +36,21 @@ pub fn main() -> Result<(), Error> {
     let track_foreground_win = std::env::var("SHADES_TRACK_FOREGROUND_WIN").as_deref() == Ok("1");
     let maximized = std::env::var("SHADES_MAXIMIZED").as_deref() == Ok("1");
 
+    let last_pos = cache::get_last_pos();
+
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new()
+    let mut window_builder = WindowBuilder::new()
         .with_title("Shades")
         .with_visible(false)
         .with_decorations(show_decoration)
         .with_always_on_top(always_on_top)
-        .with_maximized(maximized)
+        .with_maximized(maximized);
+    if let Some((pos, size)) = last_pos {
+        println!("restoring pos: {:?}", &pos);
+        window_builder = window_builder.with_position(pos).with_inner_size(size);
+    }
+
+    let window = window_builder
         .build(&event_loop)
         .expect("Could not build window");
 
@@ -251,7 +260,10 @@ pub fn main() -> Result<(), Error> {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 window_id,
-            } if window_id == id => *control_flow = ControlFlow::Exit,
+            } if window_id == id => {
+                cache::save_pos(window.outer_position().ok(), window.inner_size());
+                *control_flow = ControlFlow::Exit
+            }
             Event::WindowEvent {
                 event: WindowEvent::Resized(size),
                 window_id,
@@ -265,6 +277,7 @@ pub fn main() -> Result<(), Error> {
             _ => (),
         }
         if request_close.load(Ordering::Relaxed) {
+            cache::save_pos(window.outer_position().ok(), window.inner_size());
             *control_flow = ControlFlow::Exit;
         }
     });
