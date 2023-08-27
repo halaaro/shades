@@ -1,6 +1,8 @@
 mod cache;
+mod record;
 mod win;
 
+use crate::record::ScreenRecorder;
 use std::{
     cmp::{max, min},
     collections::hash_map::DefaultHasher,
@@ -62,18 +64,14 @@ pub fn main() -> Result<(), Error> {
     println!("hwnd={:?}, pid={}", window.hwnd(), std::process::id());
 
     if let Some(parent) = parent_win {
-        // win::set_child(&window);
         win::set_parent(&window, parent);
     }
 
     let (pix_sender, pix_receiver) = std::sync::mpsc::sync_channel(1);
-    // TODO: create capture thread
     let window = Arc::new(window);
     let winref = window.clone();
     std::thread::spawn(move || {
-        // std::thread::sleep(Duration::from_millis(500));
-        let recorder =
-            screenshot::ScreenRecorder::capture_primary().expect("could not capture primary");
+        let recorder = ScreenRecorder::capture_primary().expect("could not capture primary");
 
         let mut last_hash = 0;
         let mut hasher: DefaultHasher = Default::default();

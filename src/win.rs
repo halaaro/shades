@@ -3,8 +3,8 @@ use std::mem::size_of;
 use std::thread;
 use std::time::Duration;
 
-use windows::runtime::Result;
-use windows::Win32::Foundation::{HWND, RECT};
+use windows::core::Result;
+use windows::Win32::Foundation::{HWND, RECT, COLORREF};
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetClientRect, GetForegroundWindow, GetWindowLongPtrA, GetWindowRect,
@@ -41,7 +41,7 @@ pub(crate) fn set_layered(window: &Window) {
     let styles = unsafe { GetWindowLongPtrA(get_hwnd(window), GWL_EXSTYLE) };
     let new_style = WS_EX_LAYERED.0 | styles as u32;
     unsafe { SetWindowLongPtrA(get_hwnd(window), GWL_EXSTYLE, new_style as isize) };
-    unsafe { SetLayeredWindowAttributes(get_hwnd(window), 0, 254, LWA_ALPHA) };
+    unsafe { SetLayeredWindowAttributes(get_hwnd(window), COLORREF(0), 254, LWA_ALPHA) };
     let new_styles = unsafe { GetWindowLongPtrA(get_hwnd(window), GWL_EXSTYLE) };
     assert_eq!(new_styles ^ styles, WS_EX_LAYERED.0 as isize);
 }

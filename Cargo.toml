@@ -6,13 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-winit = "*"
-raw-window-handle = "*"
-screenshot = { path = "./crates/screenshot" }
-pixels = "*"
+pixels = "0.7.0"
+screenshot = { git = "ssh://git@github.com/halaaro/screenshot-rs.git", branch = "lib" }
+winit = "0.25.0"
 
 [dependencies.windows]
-version = "0.26"
+version = "0.48.0"
 features = [
   "Foundation",
   "Graphics_Capture",
