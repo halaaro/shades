@@ -1,5 +1,7 @@
 # shades
 
+<img src="doc/shades.png">
+
 Fake dark-mode for your desktop
 
 Intended to be used during Slack/Zoom/Teams calls where a teammate pulls up a very bright window and you have no defence... well now you can do something about it. Open a shades window and relax.
