@@ -22,7 +22,9 @@ use windows::Win32::UI::WindowsAndMessaging::GetDesktopWindow;
 
 pub struct ScreenRecorder {
     item_size: windows::Graphics::SizeInt32,
+    #[allow(dead_code)]
     frame_pool: Direct3D11CaptureFramePool,
+    #[allow(dead_code)]
     session: windows::Graphics::Capture::GraphicsCaptureSession,
     receiver: std::sync::mpsc::Receiver<windows::Win32::Graphics::Direct3D11::ID3D11Texture2D>,
     d3d_context: windows::Win32::Graphics::Direct3D11::ID3D11DeviceContext,
@@ -110,10 +112,6 @@ impl ScreenRecorder {
         let item = create_capture_item_for_monitor(monitor_handle)?;
 
         Self::new(item)
-    }
-
-    pub fn next_texture_raw(&self) -> ID3D11Texture2D {
-        self.receiver.recv().unwrap()
     }
 
     pub fn next(&self) -> Result<Screenshot> {

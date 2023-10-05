@@ -18,7 +18,7 @@ use winit::window::Window;
 
 pub(crate) fn hide_from_capture(window: &Window) -> Result<()> {
     let hwnd = window.hwnd();
-    unsafe { SetWindowDisplayAffinity(HWND(hwnd as isize), WDA_EXCLUDEFROMCAPTURE) }.ok()
+    unsafe { SetWindowDisplayAffinity(HWND(hwnd), WDA_EXCLUDEFROMCAPTURE) }.ok()
 }
 
 pub(crate) fn set_owner(window: &Window, owner: isize) -> isize {

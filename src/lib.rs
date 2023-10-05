@@ -19,7 +19,7 @@ use std::{
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::{WindowBuilder, WindowLevel},
 };
 
 use pixels::{Error, Pixels, SurfaceTexture};
@@ -45,7 +45,11 @@ pub fn main() -> Result<(), Error> {
         .with_title("Shades")
         .with_visible(false)
         .with_decorations(show_decoration)
-        .with_always_on_top(always_on_top)
+        .with_window_level(if always_on_top {
+            WindowLevel::AlwaysOnTop
+        } else {
+            WindowLevel::Normal
+        })
         .with_maximized(maximized);
     if let Some((pos, size)) = last_pos {
         println!("restoring pos: {:?}", &pos);
@@ -118,10 +122,10 @@ pub fn main() -> Result<(), Error> {
 
     let mut pixels = {
         let window_size = window.as_ref().inner_size();
-        let surface_texture =
-            SurfaceTexture::new(window_size.width, window_size.height, window.as_ref());
+        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, window.as_ref());
         Pixels::new(window_size.width, window_size.height, surface_texture)?
     };
+    pixels.frame_mut().chunks_exact_mut(4).for_each(|p| p[3] = 0xff);
 
     window.request_redraw();
 
@@ -136,18 +140,8 @@ pub fn main() -> Result<(), Error> {
 
     let mut last_hash = 0;
     let mut hasher: DefaultHasher = Default::default();
-    let mut frame_num = 0;
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
-
-        frame_num += 1;
-
-        if frame_num == 2 {
-            let size = window.inner_size();
-            pixels.resize_surface(size.width, size.height);
-            pixels.resize_buffer(size.width, size.height);
-            window.request_redraw();
-        }
 
         if let Event::RedrawRequested(_) = event {
             let pix = &mut pix;
@@ -187,9 +181,8 @@ pub fn main() -> Result<(), Error> {
                         .skip(max(0, offset_y) as usize)
                         .take(target_height)
                         .map(|row| {
-                            let x_left = max(0, min(src_width as i32, offset_x));
-                            let x_right =
-                                max(0, min(src_width as i32, target_width as i32 + offset_x));
+                            let x_left = max(0, min(src_width, offset_x));
+                            let x_right = max(0, min(src_width, target_width as i32 + offset_x));
                             row[x_left as usize * 4..x_right as usize * 4]
                                 .iter()
                                 .map(|&d| d as f32)
@@ -201,7 +194,7 @@ pub fn main() -> Result<(), Error> {
                     // TODO: use effect intensity instead
                     let do_invert = avg_rgb > 150.0;
 
-                    for (i, pixel) in pixels.get_frame().chunks_exact_mut(4).enumerate() {
+                    for (i, pixel) in pixels.frame_mut().chunks_exact_mut(4).enumerate() {
                         let col = (i % target_width) as i32;
                         let row = (i / target_width) as i32;
                         let j = max(0, min(max_j, (row + offset_y) * src_width + col + offset_x))
@@ -221,12 +214,12 @@ pub fn main() -> Result<(), Error> {
                         hasher.write(pixel);
                     }
                 }
-                let frame = pixels.get_frame();
+                let frame = pixels.frame_mut();
                 let flash = (cnt % 16) << 4;
                 if target_width > 10 && target_height > 10 {
                     for j in 0..10 {
                         for i in 0..10 {
-                            let k = (i + j * target_width as usize) * 4;
+                            let k = (i + j * target_width) * 4;
                             frame[k] ^= flash;
                         }
                     }
@@ -268,8 +261,12 @@ pub fn main() -> Result<(), Error> {
             } if window_id == id && size.width > 0 && size.height > 0 => {
                 println!("resized to {:?}!", size);
 
-                pixels.resize_surface(size.width, size.height);
-                pixels.resize_buffer(size.width, size.height);
+                pixels
+                    .resize_surface(size.width, size.height)
+                    .expect("error resizing surface");
+                pixels
+                    .resize_buffer(size.width, size.height)
+                    .expect("error resizing buffer");
                 window.request_redraw();
             }
             _ => (),

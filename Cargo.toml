@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pixels = "0.7.0"
+pixels = "0.13.0"
 screenshot = { git = "ssh://git@github.com/halaaro/screenshot-rs.git", branch = "lib" }
-winit = "0.25.0"
+winit = "0.28.7"
 
 [dependencies.windows]
 version = "0.48.0"
