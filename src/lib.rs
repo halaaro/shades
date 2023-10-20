@@ -1,5 +1,7 @@
 mod cache;
 mod record;
+
+#[cfg(windows)]
 mod win;
 
 use crate::record::ScreenRecorder;
@@ -9,7 +11,7 @@ use std::{
     default::Default,
     hash::Hasher,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::Ordering,
         mpsc::TrySendError,
         Arc,
     },
@@ -32,7 +34,7 @@ pub fn main() -> Result<(), Error> {
         .ok()
         .and_then(|s| s.parse::<isize>().ok());
     let overlay = std::env::var("SHADES_OVERLAY").as_deref() == Ok("1");
-    let mut track_win = std::env::var("SHADES_TRACK_WIN")
+    let track_win = std::env::var("SHADES_TRACK_WIN")
         .ok()
         .and_then(|s| s.parse::<isize>().ok());
     let track_foreground_win = std::env::var("SHADES_TRACK_FOREGROUND_WIN").as_deref() == Ok("1");
@@ -45,7 +47,7 @@ pub fn main() -> Result<(), Error> {
         .with_title("Shades")
         .with_visible(false)
         .with_decorations(show_decoration)
-        .with_always_on_top(always_on_top)
+        // .with_always_on_top(always_on_top)
         .with_maximized(maximized);
     if let Some((pos, size)) = last_pos {
         println!("restoring pos: {:?}", &pos);
@@ -58,20 +60,23 @@ pub fn main() -> Result<(), Error> {
 
     let id = window.id();
 
-    win::hide_from_capture(&window).expect("could not hide window from capture");
+    #[cfg(windows)]
+    {
+        win::hide_from_capture(&window).expect("could not hide window from capture");
 
-    use winit::platform::windows::WindowExtWindows;
-    println!("hwnd={:?}, pid={}", window.hwnd(), std::process::id());
+        use winit::platform::windows::WindowExtWindows;
+        println!("hwnd={:?}, pid={}", window.hwnd(), std::process::id());
 
-    if let Some(parent) = parent_win {
-        win::set_parent(&window, parent);
+        if let Some(parent) = parent_win {
+            win::set_parent(&window, parent);
+        }
     }
 
     let (pix_sender, pix_receiver) = std::sync::mpsc::sync_channel(1);
     let window = Arc::new(window);
     let winref = window.clone();
     std::thread::spawn(move || {
-        let recorder = ScreenRecorder::capture_primary().expect("could not capture primary");
+        let mut recorder = ScreenRecorder::capture_primary().expect("could not capture primary");
 
         let mut last_hash = 0;
         let mut hasher: DefaultHasher = Default::default();
@@ -96,22 +101,22 @@ pub fn main() -> Result<(), Error> {
         }
     });
 
-    if track_win.is_none() && track_foreground_win {
-        track_win = Some(win::get_foreground_hwnd());
-    }
+    // if track_win.is_none() && track_foreground_win {
+    //     track_win = Some(win::get_foreground_hwnd());
+    // }
 
-    let request_close = Arc::new(AtomicBool::new(false));
-    if let Some(hwnd) = track_win {
-        let window = Arc::clone(&window);
-        let request_close = Arc::clone(&request_close);
-        win::track(hwnd, move |event| match event {
-            Some(event) => match event {
-                win::TrackEvent::Size(size) => window.set_inner_size(size),
-                win::TrackEvent::Position(pos) => window.set_outer_position(pos),
-            },
-            None => request_close.store(true, Ordering::Relaxed),
-        });
-    }
+    // let request_close = Arc::new(AtomicBool::new(false));
+    // if let Some(hwnd) = track_win {
+    //     let window = Arc::clone(&window);
+    //     let request_close = Arc::clone(&request_close);
+        // win::track(hwnd, move |event| match event {
+        //     Some(event) => match event {
+        //         win::TrackEvent::Size(size) => window.set_inner_size(size),
+        //         win::TrackEvent::Position(pos) => window.set_outer_position(pos),
+        // },
+        // None => request_close.store(true, Ordering::Relaxed),
+        // });
+    // }
 
     let mut pix = pix_receiver.recv().unwrap();
     println!("found {} x {} pixels", pix.width, pix.height);
@@ -126,10 +131,10 @@ pub fn main() -> Result<(), Error> {
     window.request_redraw();
 
     window.set_visible(true);
-    if overlay {
-        win::set_transparent(&window);
-    }
-    win::set_layered(&window);
+    // if overlay {
+    //     win::set_transparent(&window);
+    // }
+    // win::set_layered(&window);
 
     let mut cnt = 0;
     let mut dir = 1;
@@ -144,8 +149,8 @@ pub fn main() -> Result<(), Error> {
 
         if frame_num == 2 {
             let size = window.inner_size();
-            pixels.resize_surface(size.width, size.height);
-            pixels.resize_buffer(size.width, size.height);
+            pixels.resize_surface(size.width, size.height).unwrap();
+            pixels.resize_buffer(size.width, size.height).unwrap();
             window.request_redraw();
         }
 
@@ -201,7 +206,7 @@ pub fn main() -> Result<(), Error> {
                     // TODO: use effect intensity instead
                     let do_invert = avg_rgb > 150.0;
 
-                    for (i, pixel) in pixels.get_frame().chunks_exact_mut(4).enumerate() {
+                    for (i, pixel) in pixels.frame_mut().chunks_exact_mut(4).enumerate() {
                         let col = (i % target_width) as i32;
                         let row = (i / target_width) as i32;
                         let j = max(0, min(max_j, (row + offset_y) * src_width + col + offset_x))
@@ -221,7 +226,7 @@ pub fn main() -> Result<(), Error> {
                         hasher.write(pixel);
                     }
                 }
-                let frame = pixels.get_frame();
+                let frame = pixels.frame_mut();
                 let flash = (cnt % 16) << 4;
                 if target_width > 10 && target_height > 10 {
                     for j in 0..10 {
@@ -268,15 +273,15 @@ pub fn main() -> Result<(), Error> {
             } if window_id == id && size.width > 0 && size.height > 0 => {
                 println!("resized to {:?}!", size);
 
-                pixels.resize_surface(size.width, size.height);
-                pixels.resize_buffer(size.width, size.height);
+                pixels.resize_surface(size.width, size.height).unwrap();
+                pixels.resize_buffer(size.width, size.height).unwrap();
                 window.request_redraw();
             }
             _ => (),
         }
-        if request_close.load(Ordering::Relaxed) {
-            cache::save_pos(window.outer_position().ok(), window.inner_size());
-            *control_flow = ControlFlow::Exit;
-        }
+        // if request_close.load(Ordering::Relaxed) {
+        //     cache::save_pos(window.outer_position().ok(), window.inner_size());
+        //     *control_flow = ControlFlow::Exit;
+        // }
     });
 }
