@@ -6,9 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+env_logger = "0.10.0"
+error-iter = "0.4.1"
+log = "0.4.20"
 pixels = "0.13.0"
-scrap = { git = "https://github.com/rustdesk/rustdesk", rev = "1.2.0", features = ["wayland"] }
+# scrap = { git = "https://github.com/rustdesk/rustdesk", rev = "1.2.0", features = ["wayland", "linux-pkg-config"] }
+scrap = { git = "https://github.com/quadrupleslap/scrap" }
 winit = "0.28.7"
+winit_input_helper = "0.14.1"
 
 # [dependencies.windows]
 # version = "0.48.0"

@@ -1,11 +1,9 @@
-
-
 #[cfg(windows)]
 mod win;
 
 #[cfg(unix)]
 mod linux;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, Mutex};
 
 pub use linux::*;
 

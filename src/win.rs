@@ -3,8 +3,10 @@ use std::mem::size_of;
 use std::thread;
 use std::time::Duration;
 
+use log::error;
+
 use windows::core::Result;
-use windows::Win32::Foundation::{HWND, RECT, COLORREF};
+use windows::Win32::Foundation::{COLORREF, HWND, RECT};
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetClientRect, GetForegroundWindow, GetWindowLongPtrA, GetWindowRect,
@@ -84,7 +86,7 @@ where
             )
         };
         if let Err(e) = res {
-            println!("Error in DwmGetWindowAttribute: {:?}", e);
+            error!("Error in DwmGetWindowAttribute: {:?}", e);
             callback(None);
             break;
         }

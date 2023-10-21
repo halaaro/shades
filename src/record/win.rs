@@ -169,4 +169,3 @@ impl ScreenRecorder {
         Ok(screenshot)
     }
 }
-
