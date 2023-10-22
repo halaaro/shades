@@ -4,13 +4,13 @@ use std::thread;
 use std::time::Duration;
 
 use windows::core::Result;
-use windows::Win32::Foundation::{HWND, RECT, COLORREF};
+use windows::Win32::Foundation::{HWND, RECT, COLORREF, POINT};
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetClientRect, GetForegroundWindow, GetWindowLongPtrA, GetWindowRect,
     SetLayeredWindowAttributes, SetParent, SetWindowDisplayAffinity, SetWindowLongPtrA,
     GWLP_HWNDPARENT, GWL_EXSTYLE, LWA_ALPHA, WDA_EXCLUDEFROMCAPTURE, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TRANSPARENT,
+    WS_EX_NOACTIVATE, WS_EX_TRANSPARENT, GetCursorPos,
 };
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::windows::WindowExtWindows;
@@ -27,6 +27,12 @@ pub(crate) fn set_owner(window: &Window, owner: isize) -> isize {
 
 pub(crate) fn set_parent(window: &Window, parent: isize) {
     unsafe { SetParent(get_hwnd(window), HWND(parent)) };
+}
+
+pub(crate) fn get_cursor_pos() -> (i32, i32) {
+    let mut point = POINT::default();
+    unsafe { GetCursorPos(&mut point) };
+    (point.x, point.y)
 }
 
 pub(crate) fn set_transparent(window: &Window) {

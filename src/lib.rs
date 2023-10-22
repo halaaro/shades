@@ -140,6 +140,7 @@ pub fn main() -> Result<(), Error> {
 
     let mut last_hash = 0;
     let mut hasher: DefaultHasher = Default::default();
+    let mut hittest = true;
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
 
@@ -247,6 +248,12 @@ pub fn main() -> Result<(), Error> {
             }
         }
 
+        let new_hittest = get_hittest(&window);
+        if hittest != new_hittest {
+            hittest = new_hittest;
+            window.set_cursor_hittest(hittest).unwrap();
+        }
+
         match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
@@ -255,20 +262,17 @@ pub fn main() -> Result<(), Error> {
                 cache::save_pos(window.outer_position().ok(), window.inner_size());
                 *control_flow = ControlFlow::Exit
             }
-            Event::WindowEvent {
-                event: WindowEvent::Resized(size),
-                window_id,
-            } if window_id == id && size.width > 0 && size.height > 0 => {
-                println!("resized to {:?}!", size);
+            Event::WindowEvent { event, window_id } if id == window_id => match event {
+                WindowEvent::Resized(size) if size.width > 0 && size.height > 0 => {
+                    println!("resized to {:?}!", size);
 
-                pixels
-                    .resize_surface(size.width, size.height)
-                    .expect("error resizing surface");
-                pixels
-                    .resize_buffer(size.width, size.height)
-                    .expect("error resizing buffer");
-                window.request_redraw();
-            }
+                    pixels.resize_surface(size.width, size.height).unwrap();
+                    pixels.resize_buffer(size.width, size.height).unwrap();
+                    pixels.frame_mut().chunks_exact_mut(4).for_each(|p| p[3] = 0xff);
+                    window.request_redraw();
+                }
+                _ => (),
+            },
             _ => (),
         }
         if request_close.load(Ordering::Relaxed) {
@@ -276,4 +280,37 @@ pub fn main() -> Result<(), Error> {
             *control_flow = ControlFlow::Exit;
         }
     });
+}
+
+fn get_hittest(window: &winit::window::Window) -> bool {
+    let mouse = win::get_cursor_pos();
+    let outer_pos = window.outer_position().unwrap();
+    let inner_pos = window.inner_position().unwrap();
+    let outer_size = window.outer_size();
+    let inner_size = window.inner_size();
+    (
+        // top bar
+        outer_pos.y <= mouse.1
+            && mouse.1 < inner_pos.y
+            && outer_pos.x <= mouse.0
+            && mouse.0 <= outer_pos.x + outer_size.width as i32
+    ) || (
+        // left side
+        outer_pos.x <= mouse.0
+            && mouse.0 < inner_pos.x
+            && outer_pos.y <= mouse.1
+            && mouse.1 <= outer_pos.y + outer_size.height as i32
+    ) || (
+        // bottom
+        (inner_pos.y + inner_size.height as i32) < mouse.1
+            && mouse.1 <= outer_pos.y + outer_size.height as i32
+            && outer_pos.x <= mouse.0
+            && mouse.0 <= outer_pos.x + outer_size.width as i32
+    ) || (
+        // right side
+        (inner_pos.x + inner_size.width as i32) <= mouse.0
+            && mouse.0 < outer_pos.x + outer_size.width as i32
+            && outer_pos.y <= mouse.1
+            && mouse.1 <= outer_pos.y + outer_size.height as i32
+    )
 }
