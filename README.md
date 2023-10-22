@@ -2,9 +2,9 @@
 
 <img src="doc/shades.png">
 
-Fake dark-mode for your desktop
+Fake dark-mode for Windows desktop applications.
 
-Intended to be used during Slack/Zoom/Teams calls where a teammate pulls up a very bright window and you have no defence... well now you can do something about it. Open a shades window and relax.
+Intended to be used during Slack/Zoom/Teams calls where a teammate pulls up a very bright window and you have no defence... well now you can do something about it. Open a `shades` window and relax.
 
 Also useful for legacy applications that only support light-mode.
 
@@ -15,6 +15,10 @@ Also useful for legacy applications that only support light-mode.
 ### Location and size memory
 
 The window will remember the last position and size it was used. When opened, the new window will be in the same place.
+
+### Mouse click-through
+
+Interact with the window below as you normally would with a mouse. The `shades` window just darkens.
 
 ### Running
 
