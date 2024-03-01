@@ -201,12 +201,14 @@ pub fn main() -> Result<(), Error> {
                         let j = max(0, min(max_j, (row + offset_y) * src_width + col + offset_x))
                             as usize;
 
-                        // TODO: use color-preserving invert
                         // TODO: alternate darkening strategy
                         if do_invert {
                             pixel[2] = 255 - data[j * 4];
                             pixel[1] = 255 - data[j * 4 + 1];
                             pixel[0] = 255 - data[j * 4 + 2];
+
+                            // TODO: pre-multiply matrices
+                            hue_rot_180(pixel);
                         } else {
                             pixel[2] = data[j * 4];
                             pixel[1] = data[j * 4 + 1];
@@ -280,6 +282,16 @@ pub fn main() -> Result<(), Error> {
             *control_flow = ControlFlow::Exit;
         }
     });
+}
+
+const MATRIX_HUE_ROT_180: [f64; 9] = [-0.574, 1.43, 0.144, 0.426, 0.43, 0.144, 0.426, 1.43, -0.856];
+
+fn hue_rot_180(pixel: &mut [u8]) {
+    let p = [pixel[0] as f64, pixel[1] as f64, pixel[2] as f64];
+    let m = MATRIX_HUE_ROT_180;
+    pixel[0] = (p[0] * m[0] + p[1] * m[1] + p[2] * m[2]) as u8;
+    pixel[1] = (p[0] * m[3] + p[1] * m[4] + p[2] * m[5]) as u8;
+    pixel[2] = (p[0] * m[6] + p[1] * m[7] + p[2] * m[8]) as u8;
 }
 
 fn get_hittest(window: &winit::window::Window) -> bool {
