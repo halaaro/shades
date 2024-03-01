@@ -122,10 +122,14 @@ pub fn main() -> Result<(), Error> {
 
     let mut pixels = {
         let window_size = window.as_ref().inner_size();
-        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, window.as_ref());
+        let surface_texture =
+            SurfaceTexture::new(window_size.width, window_size.height, window.as_ref());
         Pixels::new(window_size.width, window_size.height, surface_texture)?
     };
-    pixels.frame_mut().chunks_exact_mut(4).for_each(|p| p[3] = 0xff);
+    pixels
+        .frame_mut()
+        .chunks_exact_mut(4)
+        .for_each(|p| p[3] = 0xff);
 
     window.request_redraw();
 
@@ -270,7 +274,10 @@ pub fn main() -> Result<(), Error> {
 
                     pixels.resize_surface(size.width, size.height).unwrap();
                     pixels.resize_buffer(size.width, size.height).unwrap();
-                    pixels.frame_mut().chunks_exact_mut(4).for_each(|p| p[3] = 0xff);
+                    pixels
+                        .frame_mut()
+                        .chunks_exact_mut(4)
+                        .for_each(|p| p[3] = 0xff);
                     window.request_redraw();
                 }
                 _ => (),

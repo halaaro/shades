@@ -4,13 +4,13 @@ use std::thread;
 use std::time::Duration;
 
 use windows::core::Result;
-use windows::Win32::Foundation::{HWND, RECT, COLORREF, POINT};
+use windows::Win32::Foundation::{COLORREF, HWND, POINT, RECT};
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetClientRect, GetForegroundWindow, GetWindowLongPtrA, GetWindowRect,
+    GetClientRect, GetCursorPos, GetForegroundWindow, GetWindowLongPtrA, GetWindowRect,
     SetLayeredWindowAttributes, SetParent, SetWindowDisplayAffinity, SetWindowLongPtrA,
     GWLP_HWNDPARENT, GWL_EXSTYLE, LWA_ALPHA, WDA_EXCLUDEFROMCAPTURE, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TRANSPARENT, GetCursorPos,
+    WS_EX_NOACTIVATE, WS_EX_TRANSPARENT,
 };
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::windows::WindowExtWindows;
